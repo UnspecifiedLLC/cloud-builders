@@ -1,0 +1,52 @@
+sudo: false
+language: generic
+
+services:
+  - docker
+
+env:
+  global:
+    - BASENAME=GCLOUD-CONFIG
+    - COMMIT_TAG=${TRAVIS_COMMIT::6}
+
+before_install:
+
+install:
+  - docker pull gcr.io/cloud-builders/gcloud
+  - docker pull gcr.io/cloud-builders/kubectl
+  - docker pull unspecified/gcloud-config
+  - docker volume create config-gcloud
+
+script:
+  - docker build -t gcr.io/un-cloud-builders/gcloud-fission:${COMMIT_TAG} .
+  - docker run -it --rm
+    --mount source=config-gcloud,target=/root/.config/gcloud
+    -e GCLOUD_SERVICE_KEY=${GCLOUD_SERVICE_KEY}
+    unspecified/gcloud-config
+
+  # - docker build -t kube-setup ./test/kube-setup/.
+  # - docker run -it --rm
+  #   --mount source=config-gcloud,target=/root/.config/gcloud
+  #   kube-setup
+
+  # - docker run -it --rm
+  #   --mount source=config-gcloud,target=/root/.config/gcloud
+  #   gcr.io/cloud-builders/gcloud-fission:{COMMIT_TAG} some_command
+
+  # - docker build -t fission-setup ./test/fission-setup/.
+  # - docker run -it --rm
+  #   --mount source=config-gcloud,target=/root/.config/gcloud
+  #   fission-setup
+
+  # - docker build -t fission-takedown ./test/fission-takedown/.
+  # - docker run -it --rm
+  #   --mount source=config-gcloud,target=/root/.config/gcloud
+  #   fission-takedown
+
+  # - docker build -t kube-takedown ./test/kube-takedown/.
+  # - docker run -it --rm
+  #   --mount source=config-gcloud,target=/root/.config/gcloud
+  #   kube-takedown
+
+after_script:
+  - docker volume rm config-gcloud
