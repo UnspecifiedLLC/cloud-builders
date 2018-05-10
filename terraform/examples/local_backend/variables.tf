@@ -1,7 +1,8 @@
 variable "project-name" {
-  default = "cloud-builders-un-life"
+  type    = "string"
 }
 
 variable "region" {
+  type    = "string"
   default = "us-east1-d"
 }
