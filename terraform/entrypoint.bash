@@ -89,9 +89,6 @@ if [[ ! -z "$GCLOUD_TF_BUCKET" ]]; then
   trap "push-terraform-state $GCLOUD_TF_BUCKET" EXIT
 fi
 
-echo "Running: terraform graph"
-terraform graph
-
 echo "Running: terraform $@"
 terraform "$@"
 
