@@ -16,21 +16,10 @@
 
 set -e
 
-# check if gcloud service account needs to be activated
-# check if remote drive is provided
-# check if remote drive exists, create if none
-# locate service account key file
-# call terraform w/ args, configured to use remote store & sa key file
-
 active_account=""
 function get-active-account() {
   active_account=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" 2> /dev/null)
 }
-
-# active_project=""
-# function get-active-project() {
-#   active_project=$(gcloud config list core/project --format="value(core.project)" 2> /dev/null)
-# }
 
 function activate-service-key() {
   rootdir=/root/.config/gcloud-config
@@ -61,18 +50,6 @@ executing in a Google cloud builder environment.
 EOF
 }
 
-function pull-terraform-state() {
-  echo "pulling tf state"
-  gsutil cp gs://$1 terraform_state.zip
-  unzip terraform_state.zip -d ./.terraform
-}
-
-function push-terraform-state() {
-  echo "pushing tf state"
-  zip -r terraform_state.zip ./.terraform
-  gsutil cp terraform_state.zip gs://$1
-}
-
 get-active-account
 if [[ (! -z "$active_account") &&  (! -z "$GCLOUD_SERVICE_KEY") ]]; then
   account-active-warning
@@ -82,11 +59,6 @@ elif [[ (-z "$active_account") && (! -z "$GCLOUD_SERVICE_KEY") ]]; then
 elif [[ (-z "$active_account") &&  (-z "$GCLOUD_SERVICE_KEY") ]]; then
   echo "no active account and no key"
   service-account-usage
-fi
-
-if [[ ! -z "$GCLOUD_TF_BUCKET" ]]; then
-  pull-terraform-state $GCLOUD_TF_BUCKET
-  trap "push-terraform-state $GCLOUD_TF_BUCKET" EXIT
 fi
 
 echo "Running: terraform $@"
