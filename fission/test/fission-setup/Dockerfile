@@ -1,1 +1,0 @@
-FROMgcr.io/un-cloud-builders/gcloud-fission
