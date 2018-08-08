@@ -35,7 +35,7 @@ steps:
         echo "New Builder"
         echo "$d" | tee -a build_plan.list
       # build if any files have changed
-      elif [[ ! -z "git diff --no-index --name-only $d .SCRATCH/cloud-builders/$d | grep -v '^.*\.[gitignore|gcloudignore]'" ]]; then
+      elif [[ ! -z $(git diff --no-index --name-only $d .SCRATCH/cloud-builders/$d | grep -v '^.*\.[gitignore|gcloudignore]') ]]; then
         echo "Changed builder:"
         echo "$d" | tee -a build_plan.list
       fi
