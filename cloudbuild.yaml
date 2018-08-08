@@ -21,18 +21,29 @@ steps:
 
       # Determine if there's a reason to build this sub builder:
       # build if BUILD_ALL flag set
+
+      WTF=$(git diff --no-index --name-only $d .SCRATCH/cloud-builders/$d)
+      echo "WTF for ${d} is '$${WTF}'"
+      WTF=$(git diff --no-index --name-only $d .SCRATCH/cloud-builders/$d | grep -v '^.*\.[gitignore|gcloudignore]')
+      echo "WTF for ${d} is '$${WTF}'"
+
       if [ ! -z "${_BUILD_ALL}" ]; then
+        echo "BUILD_ALL"
         echo "$d" | tee -a build_plan.list
       # build if builder folder does not exist upstream
       elif [ ! -d ".SCRATCH/cloud-builders/$d" ]; then
+        echo "New Builder"
         echo "$d" | tee -a build_plan.list
       # build if any files have changed
-      elif [[ -n "git diff --no-index --name-only $d .SCRATCH/cloud-builders/$d | grep -v ^.*\.[gitignore|gcloudignore]" ]]; then
+      elif [[ ! -z "git diff --no-index --name-only $d .SCRATCH/cloud-builders/$d | grep -v '^.*\.[gitignore|gcloudignore]'" ]]; then
+        echo "Changed builder:"
         echo "$d" | tee -a build_plan.list
       fi
     done
     echo "BUILD PLAN:"
     cat build_plan.list
+    rm build_plan.list
+    touch build_plan.list
 
     # clean up the scratch directory.
     # shouldn't really be necessary as the whole workspace will be discarded.
