@@ -1,0 +1,94 @@
+# In this directory, run the following command to build this builder.
+# image repo is in project cloud-builders-un-life
+# $ gcloud builds submit . --config=cloudbuild.yaml
+# $ cloud-build-local . --config=cloudbuild.yaml --dryrun=false
+steps:
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    # Pull master
+    mkdir .SCRATCH
+    git clone https://github.com/UnspecifiedLLC/cloud-builders.git .SCRATCH/cloud-builders
+    touch build_plan.list
+    for d in */; do
+      #if it's the clone of upstream master, skip it
+      if [[ $d =~ ^\.SCRATCH.* ]]; then
+        echo "Skipping $d"
+        continue
+      fi
+
+      # Determine if there's a reason to build this sub builder:
+      # build if BUILD_ALL flag set
+      if [ ! -z "${_BUILD_ALL}" ]; then
+        echo "$d" | tee -a build_plan.list
+      # build if builder folder does not exist upstream
+      elif [ ! -d ".SCRATCH/cloud-builders/$d" ]; then
+        echo "$d" | tee -a build_plan.list
+      # build if any files have changed
+      elif [[ -n "git diff --no-index --name-only $d .SCRATCH/cloud-builders/$d | grep -v ^.*\.[gitignore|gcloudignore]" ]]; then
+        echo "$d" | tee -a build_plan.list
+      fi
+    done
+    echo "BUILD PLAN:"
+    cat build_plan.list
+
+    # clean up the scratch directory.
+    # shouldn't really be necessary as the whole workspace will be discarded.
+    rm -rf .SCRATCH
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    # File that contains failures.
+    failure_file=failure.log
+    touch ${failure_file}
+    # Loop through the builders in the build plan, and build independently.
+    while read d; do
+      echo "building $d...')"
+
+      config="${d}cloudbuild.yaml"
+      if [[ ! -f "${config}" ]]; then
+        echo "${d} failed: ${config} not found." | tee -a ${failure_file}
+        continue
+      fi
+
+      readme="${d}README.md"
+      if [[ ! -f "${readme}" ]]; then
+        # Note the error but try to build anyway.
+        echo "${d}: ${readme} not found." | tee -a ${failure_file}
+      fi
+
+      (
+        # collect all build output in a log file just for that builder. If something goes wrong, we'll dump it later.
+        logfile=${d::-1}.log # Logfile for "foo/" builder is "foo.log".
+        # when gcloud builder is updated, gcloud container builds will be deprecated
+        # gcloud builds submit $d --config=${config} > ${logfile} 2>&1
+        gcloud container builds submit $d --config=${config} > ${logfile} 2>&1
+
+        # if the build failed, record it in the failure file.
+        if [[ $? -ne 0 ]]; then
+          echo "$d failed" | tee -a ${failure_file}
+          cat ${logfile}
+        fi
+      ) &
+    done <build_plan.list
+
+    wait
+
+    # Check if there are any failures.
+    if [[ -s ${failure_file} ]]; then
+      echo
+      echo "Some builds failed:"
+      cat ${failure_file}
+      echo "Exiting."
+      exit 1
+    fi
+
+    echo "All builds succeeded."
+substitutions:
+  # pass in any value here to force a build of all sub-builders (the original default)
+  _BUILD_ALL: ''
+# tags: ['$_PR_NUMBER', '$_REPO_OWNER', '$_REPO', '$_SHA']

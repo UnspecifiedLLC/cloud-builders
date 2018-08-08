@@ -1,0 +1,6 @@
+# $ gcloud builds submit --config=cloudbuild.yaml .
+# $ cloud-build-local --config=cloudbuild.yaml --dryrun=false .
+steps:
+- name: gcr.io/cloud-builders/docker
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/activate-gcloud-service-account', '.']
+images: ['gcr.io/$PROJECT_ID/activate-gcloud-service-account']
