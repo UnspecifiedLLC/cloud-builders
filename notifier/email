@@ -1,0 +1,17 @@
+#!/bin/ash
+
+FROM_ADDRESS="un-bot@unspecified.me"
+SUBJECT_LINE="Build ${BUILD_STATUS:-Failed}"
+TO_ADDRESS=${1:-david@unspecified.me}
+
+smtpd
+sleep 3s
+
+echo -e "From: ${FROM_ADDRESS}\nSubject: ${SUBJECT_LINE}\nTo: ${TO_ADDRESS}\n\nFile Ouput:" > email.txt
+# While Something Readlines something something
+#echo -e "From: ${FROM}\nSubject: ${SUBJECT_LINE}\nTo: ${TO_ADDRESS}\n\nFile Ouput:" >> email.txt
+
+echo -e "\n\nThought you should know,\nYour friendly neighborhood (UN)bot" >> email.txt
+cat email.txt | sendmail ${TO_ADDRESS}
+sleep 5s
+echo -e "ok"

@@ -1,0 +1,17 @@
+#!/bin/ash
+
+SLACK_URL="${SLACK_API:-https://slack.com/api}"
+BOT_KEY="${SLACK_KEY}"
+CHANNEL="${SLACK_CHANNEL:-CC2USQXCP}"
+MESSAGE="${SLACK_MESSAGE:-File output}"
+
+NOT="NOT "
+PAYLOAD="{\"channel\":\"${CHANNEL}\",\"attachments\":[{\"fallback\":\"New open task [Urgent]: <http://imgur.com/new/time|Test out Slack message attachments>\",\"pretext\":\"New open task [Urgent]: <http://imgur.com/r/buttsharpies|Test out NSFW Slack message attachments>\",\"color\":\"good\",\"fields\":[{\"title\":\"Notes\",\"value\":\"This is ${NOT}Broken.\",\"short\":false}]}]}"
+
+#curl -X POST -H "Authorization: Bearer ${BOT_KEY}" -H 'Content-type: application/json' --data "${PAYLOAD}" ${SLACK_URL}/chat.postMessage
+
+curl -H "Authorization: Bearer ${BOT_KEY}" \
+-F file=@output.json \
+-F "initial_comment=${MESSAGE}" \
+-F channels=${CHANNEL} \
+${SLACK_URL}/files.upload
