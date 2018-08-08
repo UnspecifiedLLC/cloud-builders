@@ -1,4 +1,4 @@
-FROM python:3.6.6
+FROM gcr.io/cloud-builders/gcloud
 
 RUN pip install pytest
 
