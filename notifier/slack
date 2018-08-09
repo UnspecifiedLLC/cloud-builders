@@ -1,17 +1,114 @@
 #!/bin/ash
 
+# Check for a slack.var file
+#   Export current env to file
+#   Import Variables from slack.vars
+#   Import exported Variables
+#       Keeps slack.vars from clobbering env
+if [[ -f slack.vars ]]; then
+    env > env.bak
+    source slack.vars
+    source env.bak
+fi
+
 SLACK_URL="${SLACK_API:-https://slack.com/api}"
-BOT_KEY="${SLACK_KEY}"
-CHANNEL="${SLACK_CHANNEL:-CC2USQXCP}"
-MESSAGE="${SLACK_MESSAGE:-File output}"
+ASUSER="\"as_user\":true,"
 
-NOT="NOT "
-PAYLOAD="{\"channel\":\"${CHANNEL}\",\"attachments\":[{\"fallback\":\"New open task [Urgent]: <http://imgur.com/new/time|Test out Slack message attachments>\",\"pretext\":\"New open task [Urgent]: <http://imgur.com/r/buttsharpies|Test out NSFW Slack message attachments>\",\"color\":\"good\",\"fields\":[{\"title\":\"Notes\",\"value\":\"This is ${NOT}Broken.\",\"short\":false}]}]}"
+function usage {
 
-#curl -X POST -H "Authorization: Bearer ${BOT_KEY}" -H 'Content-type: application/json' --data "${PAYLOAD}" ${SLACK_URL}/chat.postMessage
+	cat <<EOM
+Usage: $(basename "$0") [OPTION]... MESSAGE
 
-curl -H "Authorization: Bearer ${BOT_KEY}" \
--F file=@output.json \
--F "initial_comment=${MESSAGE}" \
--F channels=${CHANNEL} \
-${SLACK_URL}/files.upload
+    This script will use a Bot or User api key to post using the Slack web api.
+        - https://api.slack.com/web
+
+    This can only handle one message or file at a time.
+
+    This does not use the incoming webhooks plugin. Let me know if you want that to be an option.
+        - trentdavidaa@gmail.com
+
+  -c CHANNEL_ID     Slack channel to target.
+  -f FILENAME       File to upload to Slack.
+                    - ignores -a flag
+  -u SLACK_API_URL  URL to Slack api.
+                    - Defaults to 'https://slack.com/api'
+  -a "ATTACHMENTS"  Preformatted payload attachments string.
+                    - ignored if -f
+                    - escape your quotes
+                    - renders like '"attachments":[$ATTACHMENTS]'
+                    - https://api.slack.com/methods/chat.postMessage
+  -k SLACK_API_KEY  Slack API Key.
+                    - Starts like "xoxb-##########-############-***************"
+  -h                display help
+EOM
+
+	exit 2
+}
+
+# Super basic file Upload 
+function slackFile {
+    curl -H "Authorization: Bearer ${SLACK_KEY}" -F file=@${FILENAME} -F "initial_comment=${MESSAGE:-File output}" -F channels=${SLACK_CHANNEL} ${SLACK_URL}/files.upload
+}
+
+# Defaults necessary fields for basic slack message as Bot, Allows for Intense customization.
+function slackChat {
+    PAYLOAD="{\"channel\":\"${SLACK_CHANNEL}\",\"text\":\"${MESSAGE}\",${ASUSER} \"attachments\":[${ATTACHMENTS}]}"
+    curl -X POST -H "Authorization: Bearer ${SLACK_KEY}" -H 'Content-type: application/json' --data "${PAYLOAD}" ${SLACK_URL}/chat.postMessage
+}
+
+while getopts ":c:f:m:u:a:k:h" optKey; do
+	case "$optKey" in
+		c)
+			SLACK_CHANNEL=${OPTARG:-$SLACK_CHANNEL}
+            ;;
+		f)
+			FILENAME=$OPTARG
+            ;;
+		u)
+			SLACK_URL=${OPTARG:-$SLACK_URL}
+			;;
+		a)
+			ATTACHMENTS="${OPTARG:-$SLACK_ATTACHMENTS}"
+			;;
+		k)
+			SLACK_KEY="${OPTARG:-$SLACK_KEY}"
+			;;
+		h|*)
+			usage
+			;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
+# Error Code 1 if no Slack Key defined
+if [ -z ${SLACK_KEY+x} ]; then
+    echo "No Slack key provided."
+    exit 1
+fi
+
+# Error Code 1 if File was defined, but the File is empty or does not exist.
+if [ ! -z ${FILENAME+x} ] && [ ! -s ${FILENAME} ]; then
+    echo "${FILENAME}: File not found or Empty."
+    exit 1
+fi
+
+# If a non-empty file was defined, try to build the Message and forward to fileUpload function
+if [ ! -z ${FILENAME+x} ] && [ -s ${FILENAME} ]; then
+    if [ ! -z ${1+x} ]; then MESSAGE="${*}"; fi
+    slackFile
+fi
+
+# Error out Code 2 and Show Usage if no File, or Viable message, defined.
+if [ -z ${FILENAME+x} ] && [ -z ${ATTACHMENTS+x} ] && [ -z ${1+x} ]; then
+    echo -e "\nNo Filename, Message, or Attachment defined.\n"
+    usage
+fi
+
+# Find or Build Message and forward to chatPost function.
+if [ -z ${FILENAME+x} ]; then
+    if [ ! -z ${1+x} ]; then MESSAGE="${*}"; fi
+    slackChat
+fi
+
+echo
