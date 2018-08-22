@@ -1,0 +1,25 @@
+# In this directory, run the following command to run this build
+# cloud-build-local --config=cloudbuild.yaml --dryrun=false --substitutions BRANCH_NAME='example',_ACCOUNT='admin@flappy.org' .
+# $ gcloud builds submit . --config=cloudbuild.yaml --substitutions BRANCH_NAME='example'
+steps:
+- name: 'gcr.io/${PROJECT_ID}/templater'
+  entrypoint: ash
+  args:
+  - '-c'
+  - |
+    echo "Account=${_ACCOUNT}"
+    echo "Namepsace=${BRANCH_NAME}"
+    ls -al
+    echo "For all .yaml files in working dir, template into ./generate"
+- name: 'gcr.io/${PROJECT_ID}/templater'
+  env:
+    - "TARGET_SERVICE_ACCOUNT=${_ACCOUNT}"
+    - "TARGET_NAMESPACE=${BRANCH_NAME}"
+  args: ['*.yaml','generated']
+
+substitutions:
+    _ACCOUNT:
+
+
+
+
