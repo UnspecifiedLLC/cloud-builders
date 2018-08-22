@@ -3,19 +3,19 @@
 # $ gcloud builds submit . --config=cloudbuild.yaml --substitutions BRANCH_NAME='example'
 steps:
 - name: 'gcr.io/${PROJECT_ID}/templater'
-  entrypoint: ash
-  args:
-  - '-c'
-  - |
-    echo "Account=${_ACCOUNT}"
-    echo "Namepsace=${BRANCH_NAME}"
-    ls -al
-    echo "For all .yaml files in working dir, template into ./generate"
-- name: 'gcr.io/${PROJECT_ID}/templater'
   env:
     - "TARGET_SERVICE_ACCOUNT=${_ACCOUNT}"
     - "TARGET_NAMESPACE=${BRANCH_NAME}"
-  args: ['*.yaml','generated']
+  args: ['templates/*.yaml','generated']
+- name: 'gcr.io/cloud-builders/kubectl'
+  entrypoint: bash
+  args:
+  - '-c'
+  - |
+    cat <<EOF
+      From here, we can use the generated files for the next steps, i.e. kubectl:
+      $ kubectl apply -f generated
+    EOF
 
 substitutions:
     _ACCOUNT:
