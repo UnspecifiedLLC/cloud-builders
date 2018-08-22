@@ -41,6 +41,12 @@ function parse_template {
     envsubst < ${SOURCE} > ${TARGET}/$FILENAME && echo "generated ${TARGET}/$FILENAME"
 }
 
+if [ ! -d "${TARGET}" ]; then
+    mkdir -p "${TARGET}"
+fi
+
 for filename in ${PATTERN}; do
-    parse_template $filename
+    if [ -f "${filename}" ]; then
+        parse_template $filename
+    fi
 done
