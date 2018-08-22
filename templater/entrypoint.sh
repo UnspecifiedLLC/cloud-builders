@@ -33,12 +33,11 @@ function parse_template {
         fi
     done
 
-    if [ ${#UNMATCHED[@]} -eq 0 ]; then
-        FILENAME=$(basename ${SOURCE})
-    else
+    if [ -z ${UNMATCHED} ]; then
         echo -e "Not all substitutions are set: ${UNMATCHED}" 1>&2;
     fi
 
+    FILENAME=$(basename ${SOURCE})
     envsubst < ${SOURCE} > ${TARGET}/$FILENAME && echo "generated ${TARGET}/$FILENAME"
 }
 
