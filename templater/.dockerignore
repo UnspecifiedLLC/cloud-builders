@@ -2,4 +2,5 @@
 .gitignore
 cloudbuild.yaml
 Dockerfile
+examples/
 README.md
