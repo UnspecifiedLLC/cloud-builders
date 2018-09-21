@@ -12,7 +12,7 @@ RUN apk add --update --no-cache \
     libtool \
     make \
     python \
-    && npm install -g mocha
+    && npm install -g mocha typescript
 
 ENTRYPOINT [ "npm" ]
 CMD [ "install-test" ]
