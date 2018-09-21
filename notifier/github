@@ -1,0 +1,132 @@
+#!/bin/ash
+
+# Check for a github.var file
+#   Export current env to file
+#   Import Variables from github.vars
+#   Import exported Variables
+#       Keeps github.vars from clobbering env
+if [[ -f github.vars ]]; then
+    env > env.bak
+    source github.vars
+    source env.bak
+fi
+
+function usage {
+
+	cat <<EOM
+Usage: $(basename "$0") [OPTIONS]... DESCRIPTION
+
+    This script will use an OAUTH Token to update a commit using the Github API.
+        - https://developer.github.com/v3/
+
+    This can only handle one status change at a time.
+
+     DESCRIPTION    Short message to add to Status.
+  -r REPOSITORY     Target [ Owner ]/[ Repository ].
+  -t TOKEN          Github OAUTH Token.
+  -b BRANCH         Branch on REPOSITORY to update.
+  -c COMMIT         Commit sha on BRANCH to update.
+  -i INITIATOR      Build Step Identifier.
+                    - Ex: "cloudbuild/linter"
+  -s STATUS         Status to apply.
+                    - Can be [ error, failure, pending, success ]
+  -l LINK           URL to add for link in status.
+                    - Optional
+  -h                display help
+EOM
+
+	exit 2
+}
+
+ERRORS=""
+
+function setStatus {
+    DATA="{\"state\": \"${STATUS}\", \"description\": \"${DESCRIPTION}\", \"context\": \"${INITIATOR:-CloudBuilder}\"${LINK}}"
+    curl \
+    --request POST \
+    --header "Authorization: token ${TOKEN}" \
+    --header "Content-Type: application/json" \
+    --data "$DATA" \
+    "${GITHUB_URL:-https://api.github.com}/repos/${REPOSITORY}/statuses/${COMMIT}"
+}
+
+while getopts ":r:t:b:c:i:s:l:h" optKey; do
+	case "$optKey" in
+        r)
+            REPOSITORY=${OPTARG:-$REPOSITORY}
+            ;;
+        t)
+            TOKEN=${OPTARG:-$TOKEN}
+            ;;
+        b)
+            BRANCH=${OPTARG:-$BRANCH}
+            ;;
+        c)
+            COMMIT=${OPTARG:-$COMMIT}
+            ;;
+        i)
+            INITIATOR=${OPTARG:-$INITIATOR}
+            ;;
+        s)
+            STATUS=${OPTARG:-$STATUS}
+            ;;
+        l)
+            LINK=", \"target_url\": \"${OPTARG:-$LINK}\""
+            ;;
+		h|*)
+			usage
+			;;
+	esac
+done
+
+shift $((OPTIND - 1))
+DESCRIPTION="${*}";
+
+# Error Code 1 if no Github OAUTH Token defined
+if [ -z ${TOKEN+x} ]; then
+    echo "No OAUTH Token provided."
+    ERRORS="${ERRORS}, -t TOKEN"
+fi
+
+# Error Code 1 if no Github Repository defined
+if [ -z ${REPOSITORY+x} ]; then
+    echo "No Repository provided."
+    ERRORS="${ERRORS}, -r REPOSITORY"
+fi
+
+# Error Code 1 if no Github Branch defined
+if [ -z ${BRANCH+x} ]; then
+    echo "No Branch provided."
+    ERRORS="${ERRORS}, -b BRANCH"
+fi
+
+# Error Code 1 if no Commit defined
+if [ -z ${COMMIT+x} ]; then
+    echo "No Commit provided."
+    ERRORS="${ERRORS}, -c COMMIT"
+fi
+
+# Error Code 1 if no, or incorrect, status defined
+if [ -z ${STATUS+x} ]; then
+    echo "No Status provided."
+    ERRORS="${ERRORS}, -s STATUS"
+else
+    if [ ! "$STATUS" = pending ] && [ ! "$STATUS" = failure ] && [ ! "$STATUS" = success ] && [ ! "$STATUS" = error ]; then
+        echo "Invalid Status provided, ${STATUS} is not one of (pending|failure|success|error)"
+        exit 1
+    fi
+fi
+
+# Error Code 1 if no Description defined
+if [ -z ${DESCRIPTION+x} ]; then
+    echo "No Description provided."
+    ERRORS="${ERRORS}, DESCRIPTION"
+fi
+
+# Find Errors or forward to setStatus function.
+if [ -z ${ERRORS+x} ]; then
+    setStatus
+else
+    echo "The Following Fields were missing${ERRORS}."
+    exit 1
+fi
