@@ -2,6 +2,7 @@ FROM alpine
 
 RUN apk add --update --no-cache \
     curl \
+    jq \
     opensmtpd \
     mini-sendmail \
     && rm -rf /var/cache/apk/* \
