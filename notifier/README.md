@@ -43,5 +43,6 @@ Usage: slack [OPTION]... MESSAGE
                     - https://api.slack.com/methods/chat.postMessage
   -k SLACK_API_KEY  Slack API Key.
                     - Starts like "xoxb-##########-############-***************"
+  -t SLACK_TS       Timestamp of message to update.
   -h                display help
   ```

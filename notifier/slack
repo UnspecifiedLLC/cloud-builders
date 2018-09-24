@@ -38,8 +38,8 @@ Usage: $(basename "$0") [OPTION]... MESSAGE
                     - renders like '"attachments":[$ATTACHMENTS]'
                     - https://api.slack.com/methods/chat.postMessage
   -k SLACK_API_KEY  Slack API Key.
-  -t SLACK_TS       Timestamp of message to update.
                     - Starts like "xoxb-##########-############-***************"
+  -t SLACK_TS       Timestamp of message to update.
   -h                display help
 EOM
 
