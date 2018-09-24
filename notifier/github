@@ -38,8 +38,6 @@ EOM
 	exit 2
 }
 
-ERRORS=""
-
 function setStatus {
     DATA="{\"state\": \"${STATUS}\", \"description\": \"${DESCRIPTION}\", \"context\": \"${INITIATOR:-CloudBuilder}\"${LINK}}"
     curl \
