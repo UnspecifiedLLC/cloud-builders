@@ -38,6 +38,7 @@ Usage: $(basename "$0") [OPTION]... MESSAGE
                     - renders like '"attachments":[$ATTACHMENTS]'
                     - https://api.slack.com/methods/chat.postMessage
   -k SLACK_API_KEY  Slack API Key.
+  -t SLACK_TS       Timestamp of message to update.
                     - Starts like "xoxb-##########-############-***************"
   -h                display help
 EOM
@@ -52,11 +53,11 @@ function slackFile {
 
 # Defaults necessary fields for basic slack message as Bot, Allows for Intense customization.
 function slackChat {
-    PAYLOAD="{\"channel\":\"${SLACK_CHANNEL}\",\"text\":\"${MESSAGE}\",${ASUSER} \"attachments\":[${ATTACHMENTS}]}"
-    curl -X POST -H "Authorization: Bearer ${SLACK_KEY}" -H 'Content-type: application/json' --data "${PAYLOAD}" ${SLACK_URL}/chat.postMessage
+    PAYLOAD="{\"channel\":\"${SLACK_CHANNEL}\",\"text\":\"${MESSAGE}\",${ASUSER}${UPDATE} \"attachments\":[${ATTACHMENTS}]}"
+    curl -X POST -H "Authorization: Bearer ${SLACK_KEY}" -H 'Content-type: application/json' --data "${PAYLOAD}" ${SLACK_URL}/${API_ENDPOINT}
 }
 
-while getopts ":c:f:m:u:a:k:h" optKey; do
+while getopts ":c:f:m:u:a:k:t:h" optKey; do
 	case "$optKey" in
 		c)
 			SLACK_CHANNEL=${OPTARG:-$SLACK_CHANNEL}
@@ -72,6 +73,9 @@ while getopts ":c:f:m:u:a:k:h" optKey; do
 			;;
 		k)
 			SLACK_KEY="${OPTARG:-$SLACK_KEY}"
+			;;
+		t)
+			SLACK_TS="${OPTARG:-$SLACK_TS}"
 			;;
 		h|*)
 			usage
@@ -108,6 +112,12 @@ fi
 # Find or Build Message and forward to chatPost function.
 if [ -z ${FILENAME+x} ]; then
     if [ ! -z ${1+x} ]; then MESSAGE="${*}"; fi
+    if [ ! -z ${SLACK_TS+x} ]; then
+        API_ENDPOINT="chat.update"
+        UPDATE="\"ts\":\"${SLACK_TS}\","
+    else
+        API_ENDPOINT="chat.postMessage"
+    fi
     slackChat
 fi
 
